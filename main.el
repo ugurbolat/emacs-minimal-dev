@@ -528,3 +528,45 @@ Returns the vterm buffer."
 (drag-stuff-global-mode 1)
 (drag-stuff-define-keys)
 
+
+(setq shell-file-name "/usr/bin/bash")
+;; -i (interactive?) is important for loading .bashrc?
+;;(setq shell-command-switch "-ic")
+;; NOTE exec-path-from-shell takes care of that so no need for interactive mode,
+;; which can have its own issues
+;; REF https://github.com/purcell/exec-path-from-shell?tab=readme-ov-file#making-exec-path-from-shell-faster
+(setq shell-command-switch "-c")
+
+;; add environment variable
+;; we modify environment variables for dev. mode
+(with-eval-after-load 'python
+  (setq python-shell-process-environment
+	'(
+	  ;; disabling breakpoints
+	  ;; to ignore breakpoints not to go into pdb mode
+	  ;; python's repl is used for running uninterrupted
+	  ;; if you want debugging, call explicitly pdb
+	  "PYTHONBREAKPOINT=\"0\""
+	  ;; disabling jax's gpu memory preallocation which %90 of the mem.
+	  "XLA_PYTHON_CLIENT_PREALLOCATE=\"false\""  
+	  )))
+
+;; "Ever find that a command works in your shell, but not in Emacs?" - Oh yeah!
+(elpaca
+    (exec-path-from-shell
+     :repo "purcell/exec-path-from-shell"
+     :fetcher github))
+(elpaca-wait)
+(when (memq window-system '(mac ns x)) ;; if you're in the GUI
+  ;; You might have already installed exec-path-from-shell
+  (require 'exec-path-from-shell)
+  ;; Append any paths you would like to import here:
+  (dolist (var '("LD_LIBRARY_PATH" "PYTHONPATH"))
+    (add-to-list 'exec-path-from-shell-variables var))
+  (exec-path-from-shell-initialize))
+(when (daemonp) ;; if you're in the emacs-client
+    (exec-path-from-shell-initialize))
+;; NOTE if things slow down, consider setting them as:
+;; REF: https://www.reddit.com/r/emacs/comments/f8xwau/hack_replace_execpathfromshell/
+;; (setenv "PATH" "/bin:...")
+;; (setq exec-path '("/bin" ...)
