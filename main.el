@@ -455,7 +455,37 @@ Returns the vterm buffer."
   :fetcher github
   :repo "realgud/realgud"))
 ;; TODO remote debugging setup with realgud:rpdb
+(elpaca-wait)
+;; disable extra y/n confirmation as we live dangerously 😎
+(setq realgud-safe-mode nil)
 
+;; TODO completion-at-point doesn't work out-of-box
+;; but pdb-capf setup provides the completion
+;; (elpaca
+;;  (realgud-ipdb
+;;   :fetcher github
+;;   :repo "realgud/realgud-ipdb"))
+;; (elpaca-wait)
+
+;; completion at pdb debugger buffer
+;; minor bug fix, which was related to doom emacs, but who knows it propagates
+;; original repo https://github.com/muffinmad/emacs-pdb-capf
+;; ugurbolat/emacs-pdb-capf
+(elpaca
+ (pdb-capf
+  :fetcher github
+  :repo "ugurbolat/emacs-pdb-capf"))
+(elpaca-wait)
+;; regular pdb buffer
+(add-hook 'pdb-mode-hook
+          (lambda ()
+            (add-hook 'completion-at-point-functions
+                      'pdb-capf nil t)))
+;; realgud:pdb buffer
+(add-hook 'pdb-track-mode-hook
+	  (lambda ()
+	    (add-hook 'completion-at-point-functions
+		      'pdb-capf nil t)))
 
 ;; (elpaca
 ;;   (jsonrpc
@@ -511,6 +541,7 @@ Returns the vterm buffer."
                 ;; remove tramp prefix from pyvenv-virtual-env due to ssh or docker which starts with /ssh: or /docker: and ends with :/
                 (setq pyvenv-virtual-env (replace-regexp-in-string "/.*:" "" pyvenv-virtual-env))
                 (setq python-shell-interpreter (concat pyvenv-virtual-env "bin/python3"))
+		(setq realgud--ipdb-command-name (concat pyvenv-virtual-env "bin/python -m ipdb"))
                 ;; (setq realgud:pdb-command-name "pyth on -m pdb")
                 (setq realgud:pdb-command-name (concat pyvenv-virtual-env "bin/python -m pdb")))))
   (setq pyvenv-post-deactivate-hooks
