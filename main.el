@@ -158,6 +158,7 @@
 (setq delete-by-moving-to-trash 't)
 
 ;; eglot+tramp remote setup
+;; TODO document the eglot worflow when in tramp
 (require 'tramp)
 (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
 
@@ -431,6 +432,7 @@ Returns the vterm buffer."
        (pop-to-buffer "*scratch*"))
      (let (display-buffer-alist)
        (vterm vterm-buffer-name)))))
+(global-set-key (kbd "C-c o T") '+vterm/here)
 
 ;; magit
 (elpaca
@@ -440,6 +442,11 @@ Returns the vterm buffer."
 
 
 ;; python-mode
+;; TODO document the workflow eglot, pyright setup and workflow, e.g.,
+;; setting up pyrightconfig.json
+;; NOTE doom emacs with 28 doesn't work the whole project when jump to def,
+;; but emacs 30 w/ default eglot does
+;; 
 (with-eval-after-load 'python
   (let ((map-var python-mode-map))
     ;;(define-key map-var (kbd "C-c C-s") #'quickrun-shell)
@@ -560,8 +567,10 @@ Returns the vterm buffer."
 (drag-stuff-define-keys)
 
 
-(setq shell-file-name "/usr/bin/bash")
+;;(setq shell-file-name "/usr/bin/bash")
+(setq shell-file-name "/usr/bin/zsh")
 ;; -i (interactive?) is important for loading .bashrc?
+;; REF https://stackoverflow.com/questions/6411121/how-to-make-emacs-use-my-bashrc-file
 ;;(setq shell-command-switch "-ic")
 ;; NOTE exec-path-from-shell takes care of that so no need for interactive mode,
 ;; which can have its own issues
