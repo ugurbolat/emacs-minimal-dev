@@ -27,12 +27,12 @@
 ;; Currently, python is the main development language.
 
 ;; elpaca
-(defvar elpaca-installer-version 0.6)
+(defvar elpaca-installer-version 0.7)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil
+                              :ref nil :depth 1
                               :files (:defaults "elpaca-test.el" (:exclude "extensions"))
                               :build (:not elpaca--activate-package)))
 (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
@@ -45,8 +45,10 @@
     (when (< emacs-major-version 28) (require 'subr-x))
     (condition-case-unless-debug err
         (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                 ((zerop (call-process "git" nil buffer t "clone"
-                                       (plist-get order :repo) repo)))
+                 ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                 ,@(when-let ((depth (plist-get order :depth)))
+                                                     (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                 ,(plist-get order :repo) ,repo))))
                  ((zerop (call-process "git" nil buffer t "checkout"
                                        (or (plist-get order :ref) "--"))))
                  (emacs (concat invocation-directory invocation-name))
@@ -105,7 +107,7 @@
   :fetcher github
   :repo "doomemacs/themes"))
 (elpaca-wait)
-(load-theme 'modus-vivendi-tinted t)
+(load-theme 'modus-vivendi t)
 (set-face-attribute 'default (selected-frame) :height 160)
 ;; setting same face w/ eglot highlight
 (custom-set-faces
@@ -364,11 +366,19 @@
   (marginalia-mode))
 
 
+;; TODO achieve similar state to Doom's consult+vectico+orderless
+;; e.g.,
+;; when backspace is pressed for deleting a path in minibuffer, deletes the word
+;; when typing path in minibuffer, it is fully fuzy!
+
+
 ;; keybindings for consult
 (global-set-key (kbd "C-c f r") 'consult-recent-file)
 (global-set-key (kbd "C-x C-v") 'consult-buffer)
 (global-set-key (kbd "C-x C-'") 'consult-grep)
 (global-set-key (kbd "C-s") 'consult-line)
+
+(setq consult-line-start-from-top 't)
 
 ;; company auto-complete
 (elpaca
@@ -436,6 +446,10 @@ Returns the vterm buffer."
 
 ;; magit
 (elpaca
+ (transient
+  :fetcher github
+  :repo "magit/transient"))
+(elpaca
  (magit
   :fetcher github
   :repo "magit/magit"))
@@ -455,6 +469,12 @@ Returns the vterm buffer."
     (define-key map-var [S-iso-lefttab] 'python-indent-shift-left)
     (define-key map-var (kbd "C-c C-i") 'pyimport-insert-missing)
     (define-key map-var (kbd "C-c C-b") 'python-black-region)))
+
+;; TODO get doom utils in modules/lang/python/autoload:
+;; +python/open-repl
+;; +python/open-ipython-repl
+;; add %autoreload for reloading latest changes background
+;; REF https://switowski.com/blog/ipython-autoreload/
 
 ;; debugging with realgud
 (elpaca
@@ -525,7 +545,7 @@ Returns the vterm buffer."
   :fetcher github
   :repo "pauldub/activity-watch-mode"))
 (elpaca-wait)
-(require 'magit-process)
+;;(require 'magit-process)
 (global-activity-watch-mode)
 
 ;; docker
@@ -610,3 +630,32 @@ Returns the vterm buffer."
 ;; REF: https://www.reddit.com/r/emacs/comments/f8xwau/hack_replace_execpathfromshell/
 ;; (setenv "PATH" "/bin:...")
 ;; (setq exec-path '("/bin" ...)
+
+
+
+(require 'display-line-numbers)
+;; REF lisp/lib/ui.el
+;;;###autoload
+(defun doom/toggle-line-numbers ()
+  "Toggle line numbers.
+
+Cycles through regular, relative and no line numbers. The order depends on what
+`display-line-numbers-type' is set to. If you're using Emacs 26+, and
+visual-line-mode is on, this skips relative and uses visual instead.
+
+See `display-line-numbers' for what these values mean."
+  (interactive)
+  (defvar doom--line-number-style display-line-numbers-type)
+  (let* ((styles `(t ,(if visual-line-mode 'visual 'relative) nil))
+         (order (cons display-line-numbers-type (remq display-line-numbers-type styles)))
+         (queue (memq doom--line-number-style order))
+         (next (if (= (length queue) 1)
+                   (car order)
+                 (car (cdr queue)))))
+    (setq doom--line-number-style next)
+    (setq display-line-numbers next)
+    (message "Switched to %s line numbers"
+             (pcase next
+               (`t "normal")
+               (`nil "disabled")
+               (_ (symbol-name next))))))
