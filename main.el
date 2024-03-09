@@ -67,7 +67,6 @@
 (elpaca `(,@elpaca-order))
 ;; elpaca
 
-
 ;; traditional strip-down
 (menu-bar-mode -1)
 (scroll-bar-mode -1)
@@ -141,6 +140,7 @@
 (global-set-key (kbd "S-C-<right>") 'enlarge-window-horizontally)
 (global-set-key (kbd "S-C-<down>")  'shrink-window)
 (global-set-key (kbd "S-C-<up>")    'enlarge-window)
+
 
 
 ;; theme
@@ -556,28 +556,35 @@ Returns the vterm buffer."
 	    (add-hook 'completion-at-point-functions
 		      'pdb-capf nil t)))
 
-;; (elpaca
-;;   (jsonrpc
-;;    :fetcher github
-;;    :repo "emacs-straight/jsonrpc"))
+;; (when (< emacs-major-version 29)
+;;   (elpaca
+;;       (jsonrpc
+;;        :fetcher github
+;;        :repo "emacs-straight/jsonrpc"))
+;;   )
 
-;; (elpaca
-;;  (copilot
-;;   :fetcher github
-;;   :repo "zerolfx/copilot.el"))
-;; (elpaca-wait)
-;; (use-package copilot
-;;   :hook (
-;;          (prog-mode . copilot-mode)
-;;          (org-mode . copilot-mode))
-;;   :bind (:map copilot-completion-map
-;;               ("<tab>" . 'copilot-accept-completion)
-;;               ("TAB" . 'copilot-accept-completion)
-;;               ("C-TAB" . 'copilot-accept-completion-by-word)
-;;               ("C-<tab>" . 'copilot-accept-completion-by-word))
-;;   :bind (:map prog-mode-map
-;;               ;; C-S-; NOTE C-; good old unintelligent complete
-;;               ("C-:" . 'copilot-complete)))
+(elpaca
+ (copilot
+  :fetcher github
+  :repo "zerolfx/copilot.el"))
+(elpaca-wait)
+(elpaca
+    (jsonrpc
+     :fetcher github
+     :repo "emacs-straight/jsonrpc"))
+
+(use-package copilot
+  :hook (
+         (prog-mode . copilot-mode)
+         (org-mode . copilot-mode))
+  :bind (:map copilot-completion-map
+              ("<tab>" . 'copilot-accept-completion)
+              ("TAB" . 'copilot-accept-completion)
+              ("C-TAB" . 'copilot-accept-completion-by-word)
+              ("C-<tab>" . 'copilot-accept-completion-by-word))
+  :bind (:map prog-mode-map
+              ;; C-S-; NOTE C-; good old unintelligent complete
+              ("C-:" . 'copilot-complete)))
 ;; TODO copilot--start-agent: Node 18+ is required but found 16.2
 ;; but works with other doom-emacs version, upgrading might break the other setups...
 
