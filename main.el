@@ -75,6 +75,12 @@
 (elpaca `(,@elpaca-order))
 ;; elpaca
 
+;; Install use-package support
+(elpaca elpaca-use-package
+  ;; Enable use-package :ensure support for Elpaca.
+  (elpaca-use-package-mode))
+
+
 ;; traditional strip-down
 (menu-bar-mode -1)
 (scroll-bar-mode -1)
@@ -83,6 +89,15 @@
 (delete-selection-mode 1)
 (fset 'yes-or-no-p 'y-or-n-p)
 (setq inhibit-startup-screen t) ; open scratch buffer at startup
+;; after emacs startup screen, open scratch buffer (instead of using inhibit-startup-screen, use hook)
+;;(add-hook 'emacs-startup-hook 'switch-to-buffer)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            ;; close the startup screen GNU Emacs buffer and window
+            ;;(delete-window (get-buffer-window "*GNU Emacs*"))
+            (delete-window)
+            (switch-to-buffer "*scratch*")
+            (lisp-interaction-mode)))
 (setq initial-scratch-message "")
 (setq indent-tabs-mode nil) ; stop using tabs to indent
 (setq make-backup-files nil) ; stop creating ~ backup files
@@ -158,6 +173,7 @@
   :repo "doomemacs/themes"))
 (elpaca-wait)
 (load-theme 'modus-vivendi t)
+;(load-theme 'doom-pine t)
 (set-face-attribute 'default (selected-frame) :height 160)
 ;; setting same face w/ eglot highlight
 (custom-set-faces
@@ -169,50 +185,95 @@
 (setq fringe-mode 'default)
 (set-fringe-style (quote (12 . 8)))
 ;; modeline
+
 (elpaca
- (nano-modeline
-  ;; Inherited from elpaca-menu-item.
-  ;;:files (:defaults)
-  :fetcher github
-  :repo "rougier/nano-modeline"))
+    (doom-modeline
+     :fetcher github
+     :repo "seagle0128/doom-modeline"))
 (elpaca-wait)
-(require 'nano-modeline)
-(add-hook 'prog-mode-hook #'nano-modeline-prog-mode)
-(add-hook 'text-mode-hook #'nano-modeline-text-mode)
-(setq nano-modeline-position #'nano-modeline-footer)
-(setq-default mode-line-format nil)
+(use-package doom-modeline
+  :hook (after-init . doom-modeline-mode)
+  ;; :config
+  ;; (setq doom-modeline-minor-modes t)
+  ;; (setq doom-modeline-buffer-file-name-style 'relative-from-project)
+  :custom
+  (doom-modeline-lsp t)
+  (doom-modeline-github nil)
+  (doom-modeline-mu4e nil)
+  (doom-modeline-minor-modes t)
+  (doom-modeline-persp-name nil)
+  (doom-modeline-buffer-file-name-style 'relative-from-project)
+  (doom-modeline-major-mode-icon nil))
+    
+(defun doom-modeline-conditional-buffer-encoding ()
+  "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
+  (setq-local doom-modeline-buffer-encoding
+              (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
+                                 '(coding-category-undecided coding-category-utf-8))
+                           (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
+                t)))
+(add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
+
+
+;; A minor-mode menu for the mode line 
+;; tarsius/minions
+(elpaca
+ (minions
+  :fetcher github
+  :repo "tarsius/minions"))
+(elpaca-wait)
+(use-package minions
+  :hook (doom-modeline-mode . minions-mode))
 
 (elpaca
  (hl-todo
   :fetcher github
   :repo "tarsius/hl-todo"))
 (elpaca-wait)
-(global-hl-todo-mode 1)
-(setq hl-todo-keyword-faces
-      '(("TODO" . "#ff4500")
-        ("DONT" . "#70b900")
-        ("NEXT" . "#b6a0ff")
-        ("BUG" . "#C70039")
-        ("DONE" . "#44bc44")
-        ("NOTE" . "#d3b55f")
-        ("HOLD" . "#c0c530")
-        ("HACK" . "#d0bc00")
-        ("FAIL" . "#ff8059")
-        ("WORKAROUND" . "#ffcccc")
-        ("FIXME" . "#ff9077")
-        ("REVIEW" . "#6ae4b9")
-        ("DEPRECATED" . "#bfd9ff")
-        ("REF" . "#660066")))
+(use-package hl-todo
+    :config
+    (global-hl-todo-mode 1)
+    (setq hl-todo-keyword-faces
+            '(("TODO" . "#ff4500")
+            ("DONT" . "#70b900")
+            ("NEXT" . "#b6a0ff")
+            ("BUG" . "#C70039")
+            ("DONE" . "#44bc44")
+            ("NOTE" . "#d3b55f")
+            ("HOLD" . "#c0c530")
+            ("HACK" . "#d0bc00")
+            ("FAIL" . "#ff8059")
+            ("WORKAROUND" . "#ffcccc")
+            ("FIXME" . "#ff9077")
+            ("REVIEW" . "#6ae4b9")
+            ("DEPRECATED" . "#bfd9ff")
+            ("REF" . "#660066"))))
+ 
+;; (global-hl-todo-mode 1)
+;; (setq hl-todo-keyword-faces
+;;       '(("TODO" . "#ff4500")
+;;         ("DONT" . "#70b900")
+;;         ("NEXT" . "#b6a0ff")
+;;         ("BUG" . "#C70039")
+;;         ("DONE" . "#44bc44")
+;;         ("NOTE" . "#d3b55f")
+;;         ("HOLD" . "#c0c530")
+;;         ("HACK" . "#d0bc00")
+;;         ("FAIL" . "#ff8059")
+;;         ("WORKAROUND" . "#ffcccc")
+;;         ("FIXME" . "#ff9077")
+;;         ("REVIEW" . "#6ae4b9")
+;;         ("DEPRECATED" . "#bfd9ff")
+;;         ("REF" . "#660066")))
 
 
 (recentf-mode 1)
 
-(setq delete-by-moving-to-trash 't)
-
 ;; eglot+tramp remote setup
 ;; TODO document the eglot worflow when in tramp
-(require 'tramp)
-(add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+(use-package tramp
+  :config
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path))
 
 ;; helpful
 (elpaca
@@ -265,15 +326,15 @@
  (dired-hacks
   :fetcher github
   :repo "Fuco1/dired-hacks"))
-
 ;; Block until current queue processed.
 (elpaca-wait)
-
 ;; dired
-(require 'dired)
-(setq delete-by-moving-to-trash 't)
-(add-hook 'dired-mode-hook #'dired-hide-details-mode)
+(use-package dired
+  :config
+  (setq delete-by-moving-to-trash 't)
+  (add-hook 'dired-mode-hook #'dired-hide-details-mode))
 
+;; TODO continue to wrap w/ use-package
 ;; dired extra
 (require 'dired-x)
 (when (eq system-type 'gnu/linux)
@@ -335,6 +396,11 @@
   (define-key map (kbd "<C-tab>") #'dired-subtree-cycle)
   (define-key map (kbd "<backtab>") #'dired-subtree-remove))
 (define-key dired-mode-map "e" 'ub/ediff-files)
+;; going in and out into folder with easier keys
+;; M-right arrow going into the directory at point
+;; M-left going out back to the up directory
+(define-key dired-mode-map (kbd "<M-right>") 'dired-find-file)
+(define-key dired-mode-map (kbd "<M-left>") 'dired-up-directory)
 
 
 ;; consult, vertico
@@ -419,6 +485,7 @@
 ;; TODO achieve similar state to Doom's consult+vectico+orderless
 ;; e.g.,
 ;; when backspace is pressed for deleting a path in minibuffer, deletes the word
+(define-key vertico-map (kbd "DEL") #'vertico-directory-delete-char)
 ;; when typing path in minibuffer, it is fully fuzy!
 
 
@@ -429,6 +496,47 @@
 (global-set-key (kbd "C-s") 'consult-line)
 
 (setq consult-line-start-from-top 't)
+
+
+;; functions that use `consult-find` w/ default dirs
+;; signature (defun consult-find (&optional dir initial)
+(defun ub/consult-find-main (&optional initial)
+  "Search for files with `find' in ~/main."
+  (interactive "P")
+  (consult-find "~/main" initial))
+(defun ub/consult-find-home (&optional initial)
+  "Search for files with `find' in ~/"
+  (interactive "P")
+  (consult-find "~/" initial))
+(defun ub/consult-find-org (&optional initial)
+  "Search for files with `find' in ~/main/org."
+  (interactive "P")
+  (consult-find "~/main/org" initial))
+
+;; same for `consult-grep`
+(defun ub/consult-grep-main (&optional initial)
+  "Search for files with `grep' in ~/main."
+  (interactive "P")
+  (consult-grep "~/main" initial))
+(defun ub/consult-grep-home (&optional initial)
+    "Search for files with `grep' in ~/"
+    (interactive "P")
+    (consult-grep "~/" initial))
+(defun ub/consult-grep-org (&optional initial)
+    "Search for files with `grep' in ~/main/org."
+    (interactive "P")
+    (consult-grep "~/main/org" initial))
+
+;; `consult-find` that asks the user dir which can be found interactively in minibuffer
+(defun ub/consult-find-interactive ()
+  "Search for files with `find' in a directory."
+  (interactive)
+  (consult-find (read-directory-name "Directory: ")))
+;; same for `consult-grep`
+(defun ub/consult-grep-interactive ()
+  "Search for files with `grep' in a directory."
+  (interactive)
+  (consult-grep (read-directory-name "Directory: ")))
 
 ;; company auto-complete
 (elpaca
@@ -454,7 +562,6 @@
 (setq real-auto-save-interval 60)
 
 
-
 ;; vterm
 (elpaca
  (vterm
@@ -462,6 +569,9 @@
   :repo "akermu/emacs-libvterm"))
 (elpaca-wait)
 (add-hook 'vterm-mode-hook (lambda () (setq-local global-hl-line-mode nil)))
+(use-package vterm
+  :config
+  (setq vterm-max-scrollback 10000))
 
 ;; REF modules/term/vterm/autoload.el
 (defun +vterm--configure-project-root-and-display (arg display-fn)
@@ -495,22 +605,56 @@ Returns the vterm buffer."
 (global-set-key (kbd "C-c o T") '+vterm/here)
 
 ;; magit
-(elpaca
- (transient
-  :fetcher github
-  :repo "magit/transient"))
-(elpaca
- (magit
-  :fetcher github
-  :repo "magit/magit"))
+;; when emacs 29 >= install as below
+(when (>= emacs-major-version 29)
+  ;; built-in versions are too old for magit
+  ;; seq and transient are dependencies of magit
+  (elpaca
+      (seq))
+  (elpaca
+      (transient
+       :fetcher github
+       :repo "magit/transient"))
+  (elpaca
+      (magit
+       :fetcher github
+       :repo "magit/magit")))
+;; when emacs 29 < install as below
+(when (< emacs-major-version 29)
 
+  (elpaca
+      (magit
+       :fetcher github
+       :repo "magit/magit")))
+
+(load-file (expand-file-name "commit-emojis.el" user-emacs-directory))
 
 ;; python-mode
 ;; TODO document the workflow eglot, pyright setup and workflow, e.g.,
 ;; setting up pyrightconfig.json
 ;; NOTE doom emacs with 28 doesn't work the whole project when jump to def,
 ;; but emacs 30 w/ default eglot does
-;; 
+;;
+
+;; eglot's resized echo area display too annoying
+;; REF https://joaotavora.github.io/eglot/#Eglot-Features
+;; REF https://www.reddit.com/r/emacs/comments/16nnlwa/turn_of_eldoc_in_eglot_without_turning_of_symbol/
+(setq eldoc-echo-area-use-multiline-p nil)
+(setq eldoc-echo-area-prefer-doc-buffer t)
+;; TODO
+;; ;; when emacs < 29, install eglot since it is not built-in
+;; (when (< emacs-major-version 29)
+;;   ;; (elpaca
+;;   ;;     (eglot
+;;   ;;      :fetcher github
+;;   ;;      :repo "joaotavora/eglot"))
+;;   ;; (use-package eglot
+;;   ;; :elpaca (:inherit elpaca-menu-gnu-devel-elpa)
+;;   ;; ;; ...
+;;   ;; )
+;;   (elpaca eglot)
+;;   )
+
 (with-eval-after-load 'python
   (let ((map-var python-mode-map))
     ;;(define-key map-var (kbd "C-c C-s") #'quickrun-shell)
@@ -576,15 +720,21 @@ Returns the vterm buffer."
   :fetcher github
   :repo "zerolfx/copilot.el"))
 (elpaca-wait)
-(elpaca
-    (jsonrpc
-     :fetcher github
-     :repo "emacs-straight/jsonrpc"))
+;; (elpaca
+;;     (jsonrpc
+;;      :fetcher github
+;;      :repo "emacs-straight/jsonrpc"))
 
 (use-package copilot
   :hook (
-         (prog-mode . copilot-mode)
-         (org-mode . copilot-mode))
+         ;;(prog-mode . copilot-mode)
+         ;;(org-mode . copilot-mode)
+         (copilot-mode . (lambda ()
+                           (setq-local copilot--indent-warning-printed-p t))))
+  :config
+  ;; disable idle delay for displaying instant completions which can be annoying
+  (setq copilot-idle-delay nil)
+  (setq copilot-indent-offset-warning-disable 't)
   :bind (:map copilot-completion-map
               ("<tab>" . 'copilot-accept-completion)
               ("TAB" . 'copilot-accept-completion)
@@ -593,23 +743,104 @@ Returns the vterm buffer."
   :bind (:map prog-mode-map
               ;; C-S-; NOTE C-; good old unintelligent complete
               ("C-:" . 'copilot-complete)))
-;; TODO copilot--start-agent: Node 18+ is required but found 16.2
+;; NOTE copilot--start-agent: Node 18+ is required but found 16.2
 ;; but works with other doom-emacs version, upgrading might break the other setups...
 
-;; activity-watch
 (elpaca
- (activity-watch-mode
-  :fetcher github
-  :repo "pauldub/activity-watch-mode"))
+    (yasnippet
+     :fetcher github
+     :repo "joaotavora/yasnippet"))
+(elpaca-wait)
+(require 'yasnippet)
+(yas-global-mode 1)
+(elpaca
+    (doom-snippets
+     :fetcher github
+     :repo "doomemacs/snippets"))
+(setq doom-snippets-dir
+      (expand-file-name "repos/snippets" elpaca-directory))
+
+;;(load-file (expand-file-name "~/emacs-configs/credentials.el"))
+(load-file (expand-file-name "credentials.el" user-emacs-directory))
+
+(elpaca
+    (org-ai
+     :fetcher github
+     :repo "rksm/org-ai"))
+(elpaca-wait)
+;; (use-package org-ai
+;;   ;; TODO how to defer/lazy-load?
+;;   ;;:after org-mode
+;;   :config
+;;   ;;(require 'org-ai)
+;;   (add-hook 'org-mode-hook #'org-ai-mode)
+;;   (setq org-ai-openai-api-token (ub/load-key-openai-token))
+;;   ;; if you are on the gpt-4 beta:
+;;   (setq org-ai-default-chat-model "gpt-4")
+;;   (setq chatgpt-temperature 0.1) ;; NOTE set 0.75, etc. if you want creativity/hallicunation
+;;   ;;(setq org-ai-default-max-tokens 4096)
+;;   ;; if you are using yasnippet and want `ai` snippets
+;;   (org-ai-install-yasnippets))
+;;(package-install 'websocket)
+;;(add-to-list 'load-path "path/to/org-ai")
+(require 'org)
+(require 'org-ai)
+(setq org-ai-openai-api-token (ub/load-key-openai-token))
+(add-hook 'org-mode-hook #'org-ai-mode)
+(org-ai-global-mode)
+(setq org-ai-default-chat-model "gpt-4") ; if you are on the gpt-4 beta:
+(org-ai-install-yasnippets) ; if you are using yasnippet and want `ai` snippets
+
+
+(defcustom org-ai-explain-math-prompt
+  (concat "You are an expert in math."
+          "The following shows a math description in latex."
+          "Explain each element in the equation step-by-step."
+          "List the necessary background knowledge needed to understand the given math expression such as theorems."
+          "when prompting mathematical equations, you will use latex where the inline math mode equation has prefix "
+	  "and suffix as such $...$ and display math mode equations such as"
+          "\\begin{equation}"
+          "..."
+          "\\end{equation}"
+          "When providing answers, avoid warnings/disclaimers/extra recommendations!!!"
+          )
+  "The template to use for `org-ai-explain-math'."
+  :type 'string
+  :group 'org-ai)
+
+(defun org-ai-explain-math (start end)
+  "Ask ChatGPT explain a code snippet.
+`START' is the buffer position of the start of the code snippet.
+`END' is the buffer position of the end of the code snippet."
+  (interactive "r")
+  (org-ai-on-region start end org-ai-explain-math-prompt))
+
+
+;; activity-watch
+;; when emacs 29 >=
+(when (>= emacs-major-version 29)
+  (elpaca
+      (activity-watch-mode
+       :fetcher github
+       :repo "pauldub/activity-watch-mode")))
+;; when emacs 28 <=, switching to ealier commit
+(when (< emacs-major-version 29)
+  (elpaca
+      (activity-watch-mode
+       :fetcher github
+       :repo "pauldub/activity-watch-mode"
+       :tag "1.4.0"
+       ;;:ref "ad671767cffd625cd77119b5d2ccef40726e406a"
+       )))
 (elpaca-wait)
 ;;(require 'magit-process)
 (global-activity-watch-mode)
 
-;; docker
-(elpaca
- (docker
-  :fetcher github
-  :repo "Silex/docker.el"))
+;;;; docker
+;; (elpaca
+;;  (docker
+;;   :fetcher github
+;;   :repo "Silex/docker.el"))
 
 ;; pyvenv
 (elpaca
@@ -641,8 +872,9 @@ Returns the vterm buffer."
 (elpaca-wait)
 (require 'drag-stuff)
 (drag-stuff-global-mode 1)
-(drag-stuff-define-keys)
-
+;;(drag-stuff-define-keys)
+(define-key drag-stuff-mode-map (drag-stuff--kbd 'up) 'drag-stuff-up)
+(define-key drag-stuff-mode-map (drag-stuff--kbd 'down) 'drag-stuff-down)
 
 ;;(setq shell-file-name "/usr/bin/bash")
 (setq shell-file-name "/usr/bin/zsh")
@@ -666,7 +898,8 @@ Returns the vterm buffer."
 	  "PYTHONBREAKPOINT=\"0\""
 	  ;; disabling jax's gpu memory preallocation which %90 of the mem.
 	  "XLA_PYTHON_CLIENT_PREALLOCATE=\"false\""  
-	  )))
+	  )
+    ))
 
 ;; "Ever find that a command works in your shell, but not in Emacs?" - Oh yeah!
 (elpaca
@@ -678,7 +911,10 @@ Returns the vterm buffer."
   ;; You might have already installed exec-path-from-shell
   (require 'exec-path-from-shell)
   ;; Append any paths you would like to import here:
-  (dolist (var '("LD_LIBRARY_PATH" "PYTHONPATH"))
+  (dolist (var '(
+                 ;;"LD_LIBRARY_PATH" "PYTHONPATH"
+                 ;;"SSH_AUTH_SOCK" "SSH_AGENT_PID" "GPG_AGENT_INFO"
+                 ))
     (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
 (when (daemonp) ;; if you're in the emacs-client
@@ -688,6 +924,31 @@ Returns the vterm buffer."
 ;; (setenv "PATH" "/bin:...")
 ;; (setq exec-path '("/bin" ...)
 
+
+;; ;; REF https://github.com/tarsius/keychain-environment/blob/main/keychain-environment.el
+;; ;; "Keychain is a script that manages ssh-agent and gpg-agent.
+;; ;; It is typically run from the shell's initialization file.
+;; ;; It allows your shells and cron jobs to share a single ssh-agent and/or gpg-agent."
+;; ;;;###autoload
+;; (defun keychain-refresh-environment ()
+;;   "Set ssh-agent and gpg-agent environment variables.
+
+;; Set the environment variables `SSH_AUTH_SOCK', `SSH_AGENT_PID'
+;; and `GPG_AGENT' in Emacs' `process-environment' according to
+;; information retrieved from files created by the keychain script."
+;;   (interactive)
+;;   (let* ((ssh (shell-command-to-string "keychain -q --noask --agents ssh --eval"))
+;;          (gpg (shell-command-to-string "keychain -q --noask --agents gpg --eval")))
+;;     (list (and ssh
+;;                (string-match "SSH_AUTH_SOCK[=\s]\\([^\s;\n]*\\)" ssh)
+;;                (setenv       "SSH_AUTH_SOCK" (match-string 1 ssh)))
+;;           (and ssh
+;;                (string-match "SSH_AGENT_PID[=\s]\\([0-9]*\\)?" ssh)
+;;                (setenv       "SSH_AGENT_PID" (match-string 1 ssh)))
+;;           (and gpg
+;;                (string-match "GPG_AGENT_INFO[=\s]\\([^\s;\n]*\\)" gpg)
+;;                (setenv       "GPG_AGENT_INFO" (match-string 1 gpg))))))
+;; (keychain-refresh-environment)
 
 
 (require 'display-line-numbers)
@@ -716,3 +977,48 @@ See `display-line-numbers' for what these values mean."
                (`t "normal")
                (`nil "disabled")
                (_ (symbol-name next))))))
+
+;; tame the crazy popup windows like messages etc.
+(elpaca
+    (popper
+     :repo "karthink/popper"
+     :fetcher github))
+(elpaca-wait)
+(use-package popper
+  :config
+  (setq elpaca-core-date '(20240310))
+  ;;:ensure t ; or :straight t
+  :bind (("C-`"   . popper-toggle)
+         ("M-`"   . popper-cycle)
+         ("C-M-`" . popper-toggle-type))
+  :init
+  (setq popper-reference-buffers
+        '("\\*Messages\\*"
+          "Output\\*$"
+          "\\*Async Shell Command\\*"
+          ;; *Warnings*
+          ("\\*Warnings\\*" . hide)
+          help-mode
+          compilation-mode))
+  (popper-mode +1)
+  (popper-echo-mode +1))                ; For echo area hints
+
+
+(elpaca
+    (aggressive-indent
+     :repo "Malabarba/aggressive-indent-mode"
+     :fetcher github))
+
+(use-package aggressive-indent-mode
+  :hook (emacs-lisp-mode-hook . aggressive-indent-mode))
+
+
+;; vedang/pdf-tools
+(elpaca
+    (pdf-tools
+     :repo "vedang/pdf-tools"
+     :fetcher github))
+(elpaca-wait)
+(pdf-loader-install)
+
+(load-file (expand-file-name "org-mode.el" user-emacs-directory))
