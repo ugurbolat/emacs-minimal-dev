@@ -27,8 +27,16 @@
 ;; Currently, python is the main development language.
 
 ;; elpaca
+;; place elpaca packages into different location than default
+;; wrt emacs version
+(setq ub/emacs-configs-dir "~/emacs-configs")
+(defvar elpaca-directory (expand-file-name (concat "elpaca-emacs-vanilla-really-not-really_" emacs-version) ub/emacs-configs-dir))
+;; check if ub/elpaca-dir exits, if not create it
+(unless (file-exists-p elpaca-directory)
+  (make-directory elpaca-directory t))
+
 (defvar elpaca-installer-version 0.7)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+;;(defvar elpaca-directory (expand-file-name "elpaca/" ub/elpaca-dir))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
